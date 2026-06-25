@@ -27,35 +27,35 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4">
         <AlertCircle className="h-12 w-12 text-destructive" />
-        <p className="text-muted-foreground">Failed to load dashboard data</p>
+        <p className="text-muted-foreground">Không thể tải dữ liệu bảng điều khiển</p>
       </div>
     );
   }
 
   const stats = [
     {
-      title: 'Total Todos',
+      title: 'Tổng công việc',
       value: dashboard?.totalTodos || 0,
       icon: ListTodo,
       color: 'text-indigo-500',
       bgColor: 'bg-indigo-50 dark:bg-indigo-950',
     },
     {
-      title: 'Completed',
+      title: 'Hoàn thành',
       value: dashboard?.completedTodos || 0,
       icon: CheckCircle,
       color: 'text-green-500',
       bgColor: 'bg-green-50 dark:bg-green-950',
     },
     {
-      title: 'In Progress',
+      title: 'Đang làm',
       value: dashboard?.inProgressTodos || 0,
       icon: Clock,
       color: 'text-blue-500',
       bgColor: 'bg-blue-50 dark:bg-blue-950',
     },
     {
-      title: 'Overdue',
+      title: 'Quá hạn',
       value: dashboard?.overdueTodos || 0,
       icon: AlertCircle,
       color: 'text-red-500',
@@ -83,16 +83,16 @@ export default function DashboardPage() {
         >
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-foreground">Dashboard</h1>
+              <h1 className="text-4xl font-bold text-foreground">Bảng điều khiển</h1>
               <p className="text-muted-foreground mt-2">
-                Your todo overview at a glance
+                Tổng quan về công việc của bạn
               </p>
             </div>
             <Link
               href="/todos"
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
             >
-              View All Todos
+              Xem tất cả
             </Link>
           </div>
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
-                    Todos by Status
+                    Công việc theo trạng thái
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="h-5 w-5" />
-                    Todos by Priority
+                    Công việc theo độ ưu tiên
                   </CardTitle>
                 </CardHeader>
                 <CardContent>

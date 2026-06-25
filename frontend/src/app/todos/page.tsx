@@ -35,6 +35,7 @@ export default function TodosPage() {
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [dueDateWarning, setDueDateWarning] = useState<string | null>(null);
   const [newTodo, setNewTodo] = useState<CreateTodoRequest>({
     title: '',
     description: '',
@@ -60,16 +61,52 @@ export default function TodosPage() {
 
   const handleCreateTodo = async () => {
     if (!newTodo.title.trim()) return;
+
+    // Check if due date is in the past
+    if (newTodo.dueDate) {
+      // Parse datetime-local value as local time (not UTC)
+      const [datePart, timePart] = newTodo.dueDate.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+
+      const selectedDate = new Date(year, month - 1, day, hours, minutes);
+      const now = new Date();
+
+      if (selectedDate.getTime() <= now.getTime()) {
+        setDueDateWarning('Due date đã chọn nằm trong quá khứ. Vui lòng chọn ngày khác.');
+        return;
+      }
+    }
+
+    setDueDateWarning(null);
+
+    // Convert dueDate to ISO string properly
+    let dueDateIso: string | undefined;
+    if (newTodo.dueDate) {
+      const [datePart, timePart] = newTodo.dueDate.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes] = timePart.split(':').map(Number);
+      const selectedDate = new Date(year, month - 1, day, hours, minutes);
+      dueDateIso = selectedDate.toISOString();
+    }
+
     await createTodo.mutateAsync({
       ...newTodo,
-      dueDate: newTodo.dueDate ? new Date(newTodo.dueDate).toISOString() : undefined,
+      dueDate: dueDateIso,
     });
     setIsCreateOpen(false);
     setNewTodo({ title: '', description: '', priority: 'MEDIUM', dueDate: '' });
+    setDueDateWarning(null);
+  };
+
+  const handleDueDateChange = (value: string) => {
+    setNewTodo({ ...newTodo, dueDate: value });
+    // Clear warning when user changes due date
+    setDueDateWarning(null);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this todo?')) {
+    if (confirm('Bạn có chắc chắn muốn xóa công việc này?')) {
       await deleteTodo.mutateAsync(id);
     }
   };
@@ -89,9 +126,9 @@ export default function TodosPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-foreground">Todos</h1>
+              <h1 className="text-4xl font-bold text-foreground">Công việc</h1>
               <p className="text-muted-foreground mt-2">
-                Manage your tasks efficiently
+                Quản lý công việc của bạn một cách hiệu quả
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -99,40 +136,40 @@ export default function TodosPage() {
                 href="/dashboard"
                 className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
               >
-                Dashboard
+                Bảng điều khiển
               </Link>
-              <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+              <Dialog open={isCreateOpen} onOpenChange={(open) => { setIsCreateOpen(open); if (!open) setDueDateWarning(null); }}>
                 <DialogTrigger asChild>
                   <Button className="gap-2">
                     <Plus className="h-4 w-4" />
-                    New Todo
+                    Tạo mới
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create New Todo</DialogTitle>
+                    <DialogTitle>Tạo công việc mới</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="space-y-2">
-                      <Label htmlFor="title">Title *</Label>
+                      <Label htmlFor="title">Tiêu đề *</Label>
                       <Input
                         id="title"
                         value={newTodo.title}
                         onChange={(e) => setNewTodo({ ...newTodo, title: e.target.value })}
-                        placeholder="Enter todo title"
+                        placeholder="Nhập tiêu đề công việc"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="description">Description</Label>
+                      <Label htmlFor="description">Mô tả</Label>
                       <Input
                         id="description"
                         value={newTodo.description}
                         onChange={(e) => setNewTodo({ ...newTodo, description: e.target.value })}
-                        placeholder="Enter description"
+                        placeholder="Nhập mô tả"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="priority">Priority</Label>
+                      <Label htmlFor="priority">Độ ưu tiên</Label>
                       <Select
                         value={newTodo.priority}
                         onValueChange={(value) => setNewTodo({ ...newTodo, priority: value as Priority })}
@@ -141,23 +178,33 @@ export default function TodosPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="LOW">Low</SelectItem>
-                          <SelectItem value="MEDIUM">Medium</SelectItem>
-                          <SelectItem value="HIGH">High</SelectItem>
+                          <SelectItem value="LOW">Thấp</SelectItem>
+                          <SelectItem value="MEDIUM">Trung bình</SelectItem>
+                          <SelectItem value="HIGH">Cao</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="dueDate">Due Date</Label>
+                      <Label htmlFor="dueDate">Ngày hết hạn</Label>
                       <Input
                         id="dueDate"
                         type="datetime-local"
                         value={newTodo.dueDate}
-                        onChange={(e) => setNewTodo({ ...newTodo, dueDate: e.target.value })}
+                        onChange={(e) => handleDueDateChange(e.target.value)}
                       />
+                      {dueDateWarning && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="flex items-center gap-2 p-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950 rounded-md"
+                        >
+                          <AlertCircle className="h-4 w-4" />
+                          {dueDateWarning}
+                        </motion.div>
+                      )}
                     </div>
                     <Button onClick={handleCreateTodo} className="w-full">
-                      Create Todo
+                      Tạo công việc
                     </Button>
                   </div>
                 </DialogContent>
@@ -172,7 +219,7 @@ export default function TodosPage() {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search todos..."
+                    placeholder="Tìm kiếm công việc..."
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
@@ -181,28 +228,28 @@ export default function TodosPage() {
                 </div>
                 <Select value={filters.status || 'all'} onValueChange={handleStatusFilter}>
                   <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Status" />
+                    <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="TODO">To Do</SelectItem>
-                    <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="TODO">Chưa làm</SelectItem>
+                    <SelectItem value="IN_PROGRESS">Đang làm</SelectItem>
+                    <SelectItem value="COMPLETED">Hoàn thành</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filters.priority || 'all'} onValueChange={handlePriorityFilter}>
                   <SelectTrigger className="w-full md:w-[180px]">
-                    <SelectValue placeholder="Priority" />
+                    <SelectValue placeholder="Độ ưu tiên" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Priority</SelectItem>
-                    <SelectItem value="LOW">Low</SelectItem>
-                    <SelectItem value="MEDIUM">Medium</SelectItem>
-                    <SelectItem value="HIGH">High</SelectItem>
+                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="LOW">Thấp</SelectItem>
+                    <SelectItem value="MEDIUM">Trung bình</SelectItem>
+                    <SelectItem value="HIGH">Cao</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" onClick={resetFilters}>
-                  Reset
+                  Đặt lại
                 </Button>
               </div>
             </CardContent>
@@ -217,15 +264,15 @@ export default function TodosPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
                 <AlertCircle className="h-12 w-12 text-destructive" />
-                <p className="text-muted-foreground">Failed to load todos</p>
+                <p className="text-muted-foreground">Không thể tải danh sách công việc</p>
               </CardContent>
             </Card>
           ) : todosData?.content.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
                 <LayoutGrid className="h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">No todos found</p>
-                <Button onClick={() => setIsCreateOpen(true)}>Create your first todo</Button>
+                <p className="text-muted-foreground">Chưa có công việc nào</p>
+                <Button onClick={() => setIsCreateOpen(true)}>Tạo công việc đầu tiên</Button>
               </CardContent>
             </Card>
           ) : (
@@ -251,7 +298,7 @@ export default function TodosPage() {
                                     getPriorityColor(todo.priority)
                                   )}
                                 >
-                                  {todo.priority}
+                                  {todo.priority === 'LOW' ? 'Thấp' : todo.priority === 'MEDIUM' ? 'Trung bình' : 'Cao'}
                                 </span>
                                 <span
                                   className={cn(
@@ -259,7 +306,7 @@ export default function TodosPage() {
                                     getStatusColor(todo.status)
                                   )}
                                 >
-                                  {todo.status.replace('_', ' ')}
+                                  {todo.status === 'TODO' ? 'Chưa làm' : todo.status === 'IN_PROGRESS' ? 'Đang làm' : 'Hoàn thành'}
                                 </span>
                               </div>
                               <h3 className="text-lg font-semibold truncate">{todo.title}</h3>
@@ -271,7 +318,7 @@ export default function TodosPage() {
                               {todo.dueDate && (
                                 <div className="flex items-center gap-1 mt-2 text-sm text-muted-foreground">
                                   <Calendar className="h-4 w-4" />
-                                  <span>Due: {formatDate(todo.dueDate)}</span>
+                                  <span>Hạn: {formatDate(todo.dueDate)}</span>
                                 </div>
                               )}
                             </div>
@@ -281,7 +328,7 @@ export default function TodosPage() {
                                   variant="outline"
                                   size="icon"
                                   onClick={() => handleComplete(todo.id)}
-                                  title="Mark as completed"
+                                  title="Đánh dấu hoàn thành"
                                 >
                                   <CheckCircle className="h-4 w-4 text-green-500" />
                                 </Button>
@@ -290,7 +337,7 @@ export default function TodosPage() {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => handleDelete(todo.id)}
-                                title="Delete todo"
+                                title="Xóa công việc"
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
@@ -315,7 +362,7 @@ export default function TodosPage() {
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {todosData.page + 1} of {todosData.totalPages}
+                    Trang {todosData.page + 1} / {todosData.totalPages}
                   </span>
                   <Button
                     variant="outline"
