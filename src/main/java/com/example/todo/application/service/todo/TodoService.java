@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -101,13 +102,13 @@ public class TodoService implements TodoUseCase {
         long inProgress = repository.countByStatus(Status.IN_PROGRESS);
         long overdue = repository.countOverdue();
 
-        Map<Status, Long> statusCounts = Status.values().stream()
+        Map<Status, Long> statusCounts = Arrays.stream(Status.values())
             .collect(java.util.stream.Collectors.toMap(
                 s -> s,
                 s -> repository.countByStatus(s)
             ));
 
-        Map<Priority, Long> priorityCounts = Priority.values().stream()
+        Map<Priority, Long> priorityCounts = Arrays.stream(Priority.values())
             .collect(java.util.stream.Collectors.toMap(
                 p -> p,
                 p -> repository.countByPriority(p)
